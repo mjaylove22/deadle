@@ -17,6 +17,7 @@ const MODES = {
   ability: { label: 'Ability', icon: '✨', salt: 2, has: (h) => h.abilities?.length > 0 },
   emoji: { label: 'Emoji', icon: '😀', salt: 3, has: (h) => Array.isArray(h.emoji) },
   splash: { label: 'Splash', icon: '🖼️', salt: 4, has: (h) => !!h.splash && h.splash !== 'TODO' },
+  weapon: { label: 'Weapon', icon: '🔫', salt: 5, has: (h) => !!h.gun && h.gun !== 'TODO' },
 };
 
 const dayIndex = (now = Date.now()) => Math.max(0, Math.floor((now - LAUNCH) / 864e5));
@@ -96,6 +97,7 @@ if (typeof document !== 'undefined') {
   };
   const storeKey = (mode) => (mode === 'classic' ? 'urndle' : 'urndle:' + mode);
   const plural = (n) => `${n} ${n === 1 ? 'guess' : 'guesses'}`;
+  const more = (n) => `${n} more wrong ${n === 1 ? 'guess' : 'guesses'}`;
   const portrait = (name, size) => el('img', { src: `img/hero/${slug(name)}.png`, alt: '', width: size, height: size });
 
   fetch('heroes.json').then((r) => r.json()).then(start).catch(() => {
@@ -149,7 +151,7 @@ if (typeof document !== 'undefined') {
           el('blockquote', { textContent: `“${q.text}”` }),
           unlock && q.audio
             ? el('audio', { controls: true, src: q.audio, preload: 'none', ariaLabel: 'Voice line audio' })
-            : el('p', { className: 'hint', textContent: `🔊 Voice line unlocks after ${3 - misses} more wrong ${3 - misses === 1 ? 'guess' : 'guesses'}.` }),
+            : el('p', { className: 'hint', textContent: `🔊 Voice line unlocks after ${more(3 - misses)}.` }),
         );
       } else if (mode === 'ability') {
         const ability = answer.abilities[Math.floor(rand() * answer.abilities.length)];
@@ -161,7 +163,7 @@ if (typeof document !== 'undefined') {
             src: `img/ability/${slug(ability)}.png`, alt: done ? ability : 'Mystery ability icon', width: 128, height: 128,
             style: `transform: rotate(${upright ? 0 : turn}deg)`,
           })),
-          el('p', { className: 'hint', textContent: done ? `It's ${answer.name}'s ${ability}.` : upright ? 'Icon is now upright.' : `Icon turns upright after ${3 - misses} more wrong ${3 - misses === 1 ? 'guess' : 'guesses'}.` }),
+          el('p', { className: 'hint', textContent: done ? `It's ${answer.name}'s ${ability}.` : upright ? 'Icon is now upright.' : `Icon turns upright after ${more(3 - misses)}.` }),
         );
       } else if (mode === 'emoji') {
         const shown = done ? answer.emoji.length : Math.min(misses + 1, answer.emoji.length);
@@ -170,6 +172,18 @@ if (typeof document !== 'undefined') {
           el('p', { className: 'emoji', ariaLabel: `Emoji clues: ${answer.emoji.slice(0, shown).join(' ')}` },
             ...answer.emoji.map((e, i) => el('span', { textContent: i < shown ? e : '❔', ariaHidden: 'true' }))),
           el('p', { className: 'hint', textContent: shown < answer.emoji.length ? 'One more emoji per wrong guess.' : 'All emoji revealed.' }),
+        );
+      } else if (mode === 'weapon') {
+        const color = done || misses >= 3, named = done || misses >= 5;
+        clue.replaceChildren(
+          el('p', { className: 'prompt', textContent: 'Whose weapon is this?' }),
+          el('div', { className: 'gun' }, el('img', {
+            src: answer.gun, alt: done ? `${answer.name}'s ${answer.gunName}` : 'Mystery weapon', className: color ? '' : 'silhouette',
+          })),
+          el('p', { className: 'hint', textContent: done ? `It's ${answer.name}'s ${answer.gunName}.`
+            : named ? `It's called “${answer.gunName}”.`
+            : color ? `Its name is revealed after ${more(5 - misses)}.`
+            : `Colors are revealed after ${more(3 - misses)}.` }),
         );
       } else if (mode === 'splash') {
         const x = 25 + rand() * 50, y = 15 + rand() * 40; // focus point, biased toward the upper half where faces are

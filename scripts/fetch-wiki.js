@@ -61,6 +61,7 @@ function usable(q, i, all, heroName) {
   const heroData = JSON.parse(await raw('Data:HeroData.json'));
   const releases = JSON.parse(await raw('Data:HeroReleases.json')).heroes.filter((h) => h.date);
   const byName = Object.fromEntries(Object.values(heroData).filter((v) => v && v.Name).map((v) => [v.Name, v]));
+  const lang = JSON.parse(await raw('Data:Lang_en.json')); // in-game English strings, e.g. weapon names
   const old = fs.existsSync('heroes.json') ? Object.fromEntries(JSON.parse(fs.readFileSync('heroes.json', 'utf8')).map((h) => [h.name, h])) : {};
   const TRAIT = { RapidFire: 'Rapid Fire', BurstFire: 'Burst Fire', BeamWeapon: 'Beam', HeavyHitter: 'Heavy Hitter', Spreadshot: 'Spreadshot', Projectile: 'Projectile', Bouncy: 'Bouncy' };
   const RANGE = { CloseRange: 'Close', MediumRange: 'Medium', LongRange: 'Long' };
@@ -90,8 +91,10 @@ function usable(q, i, all, heroName) {
       emoji: old[r.hero]?.emoji || 'TODO',
       abilities: [1, 2, 3, 4].map((k) => h.BoundAbilities?.[k]?.Name).filter(Boolean),
       quotes,
+      gunName: lang[h.Weapon?.NameKey] || 'TODO',
     };
     if (!pronouns) todo.push(`${r.hero}: pronouns`);
+    if (hero.gunName === 'TODO') todo.push(`${r.hero}: weapon name`);
     if (hero.emoji === 'TODO') todo.push(`${r.hero}: emoji (hand-written)`);
     if (quotes.length < 3) todo.push(`${r.hero}: only ${quotes.length} usable Select voice lines`);
     heroes.push(hero);
@@ -106,6 +109,13 @@ function usable(q, i, all, heroName) {
     if (f && (await download(f.thumb + '.webp', base + '.webp'))) h.splash = base + '.webp';
     else if (f && (await download(f.thumb, base + '.png'))) h.splash = base + '.png';
     else { h.splash = 'TODO'; todo.push(`${h.name}: splash art`); }
+  }
+  // Weapon render: "<Hero> Weapon.png" (small transparent png, used as-is)
+  const guns = await fileUrls(heroes.map((h) => `File:${h.name} Weapon.png`));
+  for (const h of heroes) {
+    const f = guns[`File:${h.name} Weapon.png`], path = `img/weapon/${slug(h.name)}.png`;
+    if (f && (await download(f.url, path))) h.gun = path;
+    else { h.gun = 'TODO'; todo.push(`${h.name}: weapon art`); }
   }
   // Hero portrait icons (autocomplete, guess rows): "<Hero>.png"
   const portraits = await fileUrls(heroes.map((h) => `File:${h.name}.png`));

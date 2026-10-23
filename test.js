@@ -32,6 +32,7 @@ for (const h of heroes) {
   for (const a of h.abilities) assert.ok(fs.existsSync(`img/ability/${slug(a)}.png`), `${h.name}: icon for ${a}`);
   for (const q of h.quotes) if (q.audio) assert.ok(fs.existsSync(q.audio), `${h.name}: ${q.audio}`);
   if (MODES.splash.has(h)) assert.ok(fs.existsSync(h.splash), `${h.name}: ${h.splash}`);
+  if (MODES.weapon.has(h)) assert.ok(fs.existsSync(h.gun), `${h.name}: ${h.gun}`);
 }
 
 // Comparison: exact / partial / miss / arrows.
