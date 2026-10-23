@@ -96,6 +96,7 @@ if (typeof document !== 'undefined') {
   };
   const storeKey = (mode) => (mode === 'classic' ? 'deadle' : 'deadle:' + mode);
   const plural = (n) => `${n} ${n === 1 ? 'guess' : 'guesses'}`;
+  const portrait = (name, size) => el('img', { src: `img/hero/${slug(name)}.png`, alt: '', width: size, height: size });
 
   fetch('heroes.json').then((r) => r.json()).then(start).catch(() => {
     $('status').textContent = 'Could not load heroes.json. Serve this folder over HTTP (see README).';
@@ -125,8 +126,11 @@ if (typeof document !== 'undefined') {
 
     function renderNav() {
       $('modes').replaceChildren(...Object.entries(MODES).map(([key, m]) => {
-        const solved = (store.get(storeKey(key)).guesses || []).includes(dailyAnswer(day, heroes, key).name);
-        const a = el('a', { href: '#' + key, textContent: `${m.icon} ${m.label}${solved ? ' ✓' : ''}` });
+        const s = store.get(storeKey(key));
+        const solved = s.day === day && (s.guesses || []).includes(dailyAnswer(day, heroes, key).name);
+        const a = el('a', { href: '#' + key, className: solved ? 'solved' : '' },
+          el('span', { className: 'badge', textContent: m.icon, ariaHidden: 'true' }),
+          el('span', { className: 'name', textContent: m.label }));
         if (solved) a.setAttribute('aria-label', `${m.label}, solved today`);
         if (key === mode) a.setAttribute('aria-current', 'page');
         return a;
@@ -181,7 +185,7 @@ if (typeof document !== 'undefined') {
       }
     }
 
-    function render() {
+    function render(animate = false) {
       renderNav();
       const done = won();
       const misses = save.guesses.filter((n) => n !== answer.name).length;
@@ -192,28 +196,39 @@ if (typeof document !== 'undefined') {
       $('clue').hidden = classic;
       if (!classic) renderClue(misses, done);
 
+      // Newest guess first; only the row just submitted animates in.
+      const newest = [...save.guesses].reverse();
       const body = $('rows');
       body.replaceChildren();
-      if (classic) for (const name of [...save.guesses].reverse()) {
+      if (classic) newest.forEach((name, i) => {
         const hero = byName.get(name.toLowerCase());
-        const tr = el('tr', {}, el('th', { scope: 'row', textContent: hero.name }));
-        for (const c of compare(hero, answer)) {
-          const td = el('td', { className: c.status, textContent: c.value + (c.arrow ? ' ' + c.arrow : '') });
+        const tr = el('tr', { className: animate && i === 0 ? 'reveal' : '' },
+          el('th', { scope: 'row' }, portrait(hero.name, 64), el('span', { textContent: hero.name })));
+        compare(hero, answer).forEach((c, j) => {
+          const td = el('td', { className: c.status }, el('span', { textContent: c.value }));
+          if (c.arrow) td.append(el('span', { className: 'arrow', textContent: c.arrow }));
+          td.style.setProperty('--i', j);
           const verdict = { green: 'correct', yellow: 'partial match', red: 'wrong' }[c.status];
           const hint = c.arrow ? (c.arrow === '↑' ? ', answer is higher' : ', answer is lower') : '';
           td.setAttribute('aria-label', `${c.label}: ${c.value}, ${verdict}${hint}`);
           tr.append(td);
-        }
+        });
         body.append(tr);
-      }
+      });
       $('board').hidden = !classic || !save.guesses.length;
       $('list').hidden = classic || !save.guesses.length;
-      $('list').replaceChildren(...[...save.guesses].reverse().map((n) =>
-        el('li', { className: n === answer.name ? 'green' : 'red', textContent: `${n === answer.name ? '✅' : '❌'} ${n}` })));
+      $('list').replaceChildren(...newest.map((n, i) => {
+        const hit = n === answer.name;
+        return el('li', { className: (hit ? 'green' : 'red') + (animate && i === 0 ? ' reveal' : '') },
+          portrait(n, 44), el('span', { textContent: n }), el('span', { className: 'mark', textContent: hit ? '✓' : '✕', ariaLabel: hit ? 'correct' : 'wrong' }));
+      }));
 
       input.disabled = $('submit').disabled = done;
       $('win').hidden = !done;
-      if (done) $('win-text').textContent = `You got ${answer.name} in ${plural(save.guesses.length)}!`;
+      if (done) {
+        $('win-text').textContent = `You got ${answer.name} in ${plural(save.guesses.length)}!`;
+        $('win-img').src = `img/hero/${slug(answer.name)}.png`;
+      }
       const streak = save.lastWin >= day - 1 ? save.streak || 0 : 0;
       $('streak').textContent = `${MODES[mode].label} streak: ${streak} · Best: ${save.best || 0}`;
     }
@@ -230,7 +245,7 @@ if (typeof document !== 'undefined') {
       if (!matches.length) active = -1;
       list.innerHTML = '';
       matches.forEach((h, i) => {
-        const li = el('li', { id: 'opt-' + i, textContent: h.name });
+        const li = el('li', { id: 'opt-' + i }, portrait(h.name, 36), el('span', { textContent: h.name }));
         li.setAttribute('role', 'option');
         li.setAttribute('aria-selected', i === active);
         li.addEventListener('mousedown', (e) => { e.preventDefault(); submit(h.name); });
@@ -259,7 +274,7 @@ if (typeof document !== 'undefined') {
       matches = [];
       drawOptions();
       $('status').textContent = hero === answer ? 'Correct!' : `${hero.name} is not it.`;
-      render();
+      render(true);
       if (hero === answer) $('share').focus(); else input.focus();
     }
 

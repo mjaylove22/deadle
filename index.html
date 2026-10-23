@@ -3,46 +3,54 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light dark">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0c1213">
   <title>Deadle — daily Deadlock hero guess</title>
   <meta name="description" content="Guess the daily Deadlock hero. Classic, quote, ability, emoji and splash modes. New heroes every day at midnight UTC.">
   <link rel="icon" href="data:,">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;700&display=swap">
   <link rel="stylesheet" href="style.css">
   <script src="app.js" defer></script>
 </head>
 <body>
   <main>
-    <header>
-      <h1>Deadle <span id="day"></span></h1>
+    <header class="masthead">
+      <h1 class="logo">Deadle <span id="day" class="day"></span></h1>
+      <p class="tagline">Guess the Deadlock hero</p>
       <nav id="modes" aria-label="Game modes"></nav>
-      <p id="intro"></p>
-      <p>New heroes every day at 00:00 UTC.</p>
-      <p id="streak"></p>
     </header>
 
-    <section id="clue" class="clue" aria-label="Clue" hidden></section>
+    <section class="panel intro">
+      <p id="intro"></p>
+      <p class="small">New heroes every day at 00:00 UTC</p>
+      <p class="small" id="streak"></p>
+    </section>
+
+    <section id="clue" class="panel clue" aria-label="Clue" hidden></section>
 
     <form id="form" autocomplete="off">
-      <label for="guess">Hero name</label>
+      <label for="guess" class="visually-hidden">Hero name</label>
       <div class="combo">
         <input id="guess" type="text" role="combobox" aria-autocomplete="list" aria-controls="options"
-               aria-expanded="false" placeholder="Type a hero…" autofocus>
+               aria-expanded="false" placeholder="Type a hero name…" autofocus>
         <ul id="options" role="listbox" aria-label="Matching heroes" hidden></ul>
       </div>
       <button id="submit" type="submit">Guess</button>
     </form>
     <p id="status" role="status" aria-live="polite"></p>
 
-    <section id="win" hidden>
+    <section id="win" class="panel win" hidden>
+      <img id="win-img" class="portrait" width="96" height="96" alt="">
       <h2 id="win-text"></h2>
-      <button id="share" type="button">Share</button>
+      <button id="share" type="button">Share result</button>
     </section>
 
     <div id="board" hidden>
-      <p class="legend">Green = match, yellow = partial, red = no match, ↑↓ = answer is higher/lower.</p>
       <div class="scroll">
       <table>
-        <caption>Your guesses, newest first</caption>
+        <caption class="visually-hidden">Your guesses, newest first</caption>
         <thead>
           <tr><th scope="col">Hero</th><th scope="col">Pronouns</th><th scope="col">Type</th><th scope="col">Weapon traits</th>
             <th scope="col">Range</th><th scope="col">Release year</th><th scope="col">Base health</th><th scope="col">Clip size</th></tr>
@@ -50,6 +58,9 @@
         <tbody id="rows"></tbody>
       </table>
       </div>
+      <p class="legend" aria-label="Color key">
+        <span class="chip green">Match</span><span class="chip yellow">Partial</span><span class="chip red">No match</span><span class="chip">↑↓ Answer is higher / lower</span>
+      </p>
     </div>
     <ul id="list" class="guesses" aria-label="Your guesses, newest first" hidden></ul>
 

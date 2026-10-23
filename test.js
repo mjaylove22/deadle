@@ -28,6 +28,7 @@ for (const mode of Object.keys(MODES)) {
 
 // Every asset a mode can show exists on disk.
 for (const h of heroes) {
+  assert.ok(fs.existsSync(`img/hero/${slug(h.name)}.png`), `${h.name}: portrait`);
   for (const a of h.abilities) assert.ok(fs.existsSync(`img/ability/${slug(a)}.png`), `${h.name}: icon for ${a}`);
   for (const q of h.quotes) if (q.audio) assert.ok(fs.existsSync(q.audio), `${h.name}: ${q.audio}`);
   if (MODES.splash.has(h)) assert.ok(fs.existsSync(h.splash), `${h.name}: ${h.splash}`);

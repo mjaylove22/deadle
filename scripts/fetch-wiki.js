@@ -107,6 +107,12 @@ function usable(q, i, all, heroName) {
     else if (f && (await download(f.thumb, base + '.png'))) h.splash = base + '.png';
     else { h.splash = 'TODO'; todo.push(`${h.name}: splash art`); }
   }
+  // Hero portrait icons (autocomplete, guess rows): "<Hero>.png"
+  const portraits = await fileUrls(heroes.map((h) => `File:${h.name}.png`));
+  for (const h of heroes) {
+    const f = portraits[`File:${h.name}.png`];
+    if (!f || !(await download(f.url, `img/hero/${slug(h.name)}.png`))) todo.push(`${h.name}: portrait icon`);
+  }
   // Ability icons: "<Ability>.png"
   const icons = await fileUrls(heroes.flatMap((h) => h.abilities.map((a) => `File:${a}.png`)));
   for (const h of heroes) for (const a of h.abilities) {
