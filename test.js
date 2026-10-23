@@ -1,6 +1,7 @@
 // Run: node test.js
 const assert = require('assert');
-const { answerFor, compare, shareText } = require('./app.js');
+const fs = require('fs');
+const { MODES, answerFor, dailyAnswer, compare, shareText, slug } = require('./app.js');
 const heroes = require('./heroes.json');
 const N = heroes.length;
 
@@ -17,6 +18,21 @@ for (let d = 0; d < 400; d++) {
 }
 assert.ok(Array.from({ length: 200 }, (_, i) => answerFor(400 + i, later).name).includes('Newcomer'), 'newcomer joins later');
 
+// Every mode: no repeats within its pool's cycle, and a different daily order than classic.
+for (const mode of Object.keys(MODES)) {
+  const pool = heroes.filter(MODES[mode].has);
+  const picks = Array.from({ length: pool.length }, (_, d) => dailyAnswer(d, heroes, mode).name);
+  assert.strictEqual(new Set(picks).size, pool.length, `${mode}: no repeats`);
+  if (mode !== 'classic') assert.notDeepStrictEqual(picks.slice(0, 10), cycle.slice(0, 10), `${mode}: own daily order`);
+}
+
+// Every asset a mode can show exists on disk.
+for (const h of heroes) {
+  for (const a of h.abilities) assert.ok(fs.existsSync(`img/ability/${slug(a)}.png`), `${h.name}: icon for ${a}`);
+  for (const q of h.quotes) if (q.audio) assert.ok(fs.existsSync(q.audio), `${h.name}: ${q.audio}`);
+  if (MODES.splash.has(h)) assert.ok(fs.existsSync(h.splash), `${h.name}: ${h.splash}`);
+}
+
 // Comparison: exact / partial / miss / arrows.
 const a = { pronouns: 'He/Him', type: 'Brawler', weapon: ['Rapid Fire', 'Spreadshot'], range: 'Close', year: 2025, health: 800, clip: 20 };
 const g = { pronouns: 'He/Him', type: 'Mystic', weapon: ['Spreadshot'], range: 'Close', year: 2024, health: 900, clip: 20 };
@@ -32,6 +48,7 @@ assert.strictEqual(compare({ ...a, weapon: [] }, { ...a, weapon: [] })[2].value,
 
 // Share text never contains the hero name.
 const abrams = heroes.find((h) => h.name === 'Abrams');
-assert.ok(!shareText(0, [compare(abrams, abrams)]).includes('Abrams'));
+assert.ok(!shareText(0, 'classic', [compare(abrams, abrams).map((c) => c.status)]).includes('Abrams'));
+assert.strictEqual(shareText(0, 'emoji', [['red'], ['green']]).split('\n')[1], '🟥🟩');
 
-console.log(`ok — ${N} heroes, today's cycle has no repeats`);
+console.log(`ok — ${N} heroes, ${Object.keys(MODES).length} modes, all assets present`);

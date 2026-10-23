@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
   <title>Deadle — daily Deadlock hero guess</title>
-  <meta name="description" content="Guess the daily Deadlock hero. New hero every day at midnight UTC.">
+  <meta name="description" content="Guess the daily Deadlock hero. Classic, quote, ability, emoji and splash modes. New heroes every day at midnight UTC.">
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="style.css">
   <script src="app.js" defer></script>
@@ -14,9 +14,13 @@
   <main>
     <header>
       <h1>Deadle <span id="day"></span></h1>
-      <p>Guess today's Deadlock hero. New hero every day at 00:00 UTC.</p>
+      <nav id="modes" aria-label="Game modes"></nav>
+      <p id="intro"></p>
+      <p>New heroes every day at 00:00 UTC.</p>
       <p id="streak"></p>
     </header>
+
+    <section id="clue" class="clue" aria-label="Clue" hidden></section>
 
     <form id="form" autocomplete="off">
       <label for="guess">Hero name</label>
@@ -47,14 +51,15 @@
       </table>
       </div>
     </div>
+    <ul id="list" class="guesses" aria-label="Your guesses, newest first" hidden></ul>
 
     <div id="ad-slot"></div>
 
     <p id="yesterday"></p>
   </main>
   <footer>
-    Deadle is a fan project, not affiliated with or endorsed by Valve. Deadlock is a trademark of Valve Corporation.
-    Hero data from <a href="https://deadlock.wiki">deadlock.wiki</a>.
+    Deadle is a fan project, not affiliated with or endorsed by Valve. Deadlock and all related art, icons and voice
+    lines are trademarks and property of Valve Corporation. Hero data and assets via <a href="https://deadlock.wiki">deadlock.wiki</a>.
   </footer>
 </body>
 </html>

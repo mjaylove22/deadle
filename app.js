@@ -1,5 +1,5 @@
 // Deadle — daily Deadlock hero guesser. Pure logic on top, DOM wiring at the bottom.
-const LAUNCH = Date.UTC(2026, 9, 22); // day 1 = 2026-10-22 UTC. Never change: it shifts every past answer.
+const LAUNCH = Date.UTC(2026, 9, 22); // day 1 = 2026-10-22 UTC. Never change after launch: it shifts every past answer.
 const ATTRS = [
   { key: 'pronouns', label: 'Pronouns' },
   { key: 'type', label: 'Type' },
@@ -9,9 +9,19 @@ const ATTRS = [
   { key: 'health', label: 'Base health' },
   { key: 'clip', label: 'Clip size' },
 ];
+// Each mode has its own daily hero (salt) and only picks heroes that have its data (has).
+// Never change a salt after launch. classic must stay 0.
+const MODES = {
+  classic: { label: 'Classic', icon: '🔤', salt: 0, has: () => true },
+  quote: { label: 'Quote', icon: '💬', salt: 1, has: (h) => h.quotes?.length > 0 },
+  ability: { label: 'Ability', icon: '✨', salt: 2, has: (h) => h.abilities?.length > 0 },
+  emoji: { label: 'Emoji', icon: '😀', salt: 3, has: (h) => Array.isArray(h.emoji) },
+  splash: { label: 'Splash', icon: '🖼️', salt: 4, has: (h) => !!h.splash && h.splash !== 'TODO' },
+};
 
 const dayIndex = (now = Date.now()) => Math.max(0, Math.floor((now - LAUNCH) / 864e5));
 const isoDate = (day) => new Date(LAUNCH + day * 864e5).toISOString().slice(0, 10);
+const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
 function mulberry32(seed) {
   return () => {
@@ -34,16 +44,20 @@ function shuffle(list, seed) {
 // Days are split into cycles; each cycle is a seeded shuffle of the roster as it stood when the cycle began,
 // so nobody repeats within a cycle. A new hero gets `"added": "YYYY-MM-DD"` (today or later, never backdated)
 // and joins the first cycle starting on/after that date, so past answers never move.
-// ponytail: removing or renaming a hero DOES rewrite history; mark it `"retired"` instead if that ever happens.
-function answerFor(day, heroes) {
+// ponytail: removing or renaming a hero, or a hero gaining data for a mode it lacked (MODES.has), DOES rewrite
+// that mode's history. Fill data gaps before launch; after launch, give such heroes a future `added` date.
+function answerFor(day, heroes, salt = 0) {
   for (let start = 0, cycle = 0; ; cycle++) {
     const pool = heroes
       .filter((h) => !h.added || h.added <= isoDate(start))
       .sort((a, b) => (a.name < b.name ? -1 : 1));
-    if (day < start + pool.length) return shuffle(pool, 0xdead + cycle)[day - start];
+    if (day < start + pool.length) return shuffle(pool, 0xdead + cycle + salt * 7919)[day - start];
     start += pool.length;
   }
 }
+const dailyAnswer = (day, heroes, mode) => answerFor(day, heroes.filter(MODES[mode].has), MODES[mode].salt);
+// Seeded per-day randomness for a mode: which quote/ability, splash focus point, icon rotation.
+const dailyRand = (day, mode) => mulberry32(day * 1009 + MODES[mode].salt);
 
 // One result per attribute: status 'green' | 'yellow' | 'red', and arrow '↑'/'↓' (answer is higher/lower) for numbers.
 function compare(guess, answer) {
@@ -61,19 +75,27 @@ function compare(guess, answer) {
 }
 
 const EMOJI = { green: '🟩', yellow: '🟨', red: '🟥' };
-const shareText = (day, rows) =>
-  `Deadle #${day + 1} — solved in ${rows.length} ${rows.length === 1 ? 'guess' : 'guesses'}\n` +
-  rows.map((r) => r.map((c) => EMOJI[c.status]).join('')).join('\n');
+// rows: one array of statuses per guess (classic: 7 per guess, other modes: 1).
+function shareText(day, mode, rows) {
+  const m = MODES[mode], n = rows.length;
+  const grid = mode === 'classic'
+    ? rows.map((r) => r.map((s) => EMOJI[s]).join('')).join('\n')
+    : rows.map((r) => EMOJI[r[0]]).join('');
+  return `Deadle #${day + 1} ${m.icon} ${m.label} — solved in ${n} ${n === 1 ? 'guess' : 'guesses'}\n${grid}`;
+}
 
-if (typeof module !== 'undefined') module.exports = { answerFor, compare, shareText, dayIndex };
+if (typeof module !== 'undefined') module.exports = { MODES, answerFor, dailyAnswer, dailyRand, compare, shareText, dayIndex, slug };
 
 // ---------- browser ----------
 if (typeof document !== 'undefined') {
   const $ = (id) => document.getElementById(id);
+  const el = (tag, props = {}, ...kids) => { const e = Object.assign(document.createElement(tag), props); e.append(...kids); return e; };
   const store = {
-    get() { try { return JSON.parse(localStorage.getItem('deadle')) || {}; } catch { return {}; } },
-    set(v) { try { localStorage.setItem('deadle', JSON.stringify(v)); } catch { /* blocked storage: game still works, just won't persist */ } },
+    get(key) { try { return JSON.parse(localStorage.getItem(key)) || {}; } catch { return {}; } },
+    set(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); } catch { /* blocked storage: game still works, just won't persist */ } },
   };
+  const storeKey = (mode) => (mode === 'classic' ? 'deadle' : 'deadle:' + mode);
+  const plural = (n) => `${n} ${n === 1 ? 'guess' : 'guesses'}`;
 
   fetch('heroes.json').then((r) => r.json()).then(start).catch(() => {
     $('status').textContent = 'Could not load heroes.json. Serve this folder over HTTP (see README).';
@@ -81,33 +103,102 @@ if (typeof document !== 'undefined') {
 
   function start(heroes) {
     const day = dayIndex();
-    const answer = answerFor(day, heroes);
     const byName = new Map(heroes.map((h) => [h.name.toLowerCase(), h]));
-    let save = store.get();
-    if (save.day !== day) save = { ...save, day, guesses: [] };
-    save.guesses = save.guesses.filter((n) => byName.has(n.toLowerCase())); // drop names no longer in the roster
+    const input = $('guess'), list = $('options');
+    let mode, answer, save, active = -1, matches = [];
     const won = () => save.guesses.includes(answer.name);
 
-    $('day').textContent = `#${day + 1}`;
-    if (day > 0) $('yesterday').textContent = `Yesterday's hero was ${answerFor(day - 1, heroes).name}.`;
+    function load() {
+      mode = MODES[location.hash.slice(1)] ? location.hash.slice(1) : 'classic';
+      answer = dailyAnswer(day, heroes, mode);
+      save = store.get(storeKey(mode));
+      if (save.day !== day) save = { ...save, day, guesses: [] };
+      save.guesses = save.guesses.filter((n) => byName.has(n.toLowerCase())); // drop names no longer in the roster
+      $('day').textContent = `#${day + 1}`;
+      $('yesterday').textContent = day > 0 ? `Yesterday's ${MODES[mode].label} hero was ${dailyAnswer(day - 1, heroes, mode).name}.` : '';
+      $('status').textContent = '';
+      input.value = '';
+      matches = [];
+      drawOptions();
+      render();
+    }
 
-    const input = $('guess'), list = $('options');
-    let active = -1, matches = [];
+    function renderNav() {
+      $('modes').replaceChildren(...Object.entries(MODES).map(([key, m]) => {
+        const solved = (store.get(storeKey(key)).guesses || []).includes(dailyAnswer(day, heroes, key).name);
+        const a = el('a', { href: '#' + key, textContent: `${m.icon} ${m.label}${solved ? ' ✓' : ''}` });
+        if (solved) a.setAttribute('aria-label', `${m.label}, solved today`);
+        if (key === mode) a.setAttribute('aria-current', 'page');
+        return a;
+      }));
+    }
+
+    // The clue for non-classic modes. misses = wrong guesses so far; each one reveals a bit more.
+    function renderClue(misses, done) {
+      const rand = dailyRand(day, mode);
+      const clue = $('clue');
+      if (mode === 'quote') {
+        const q = answer.quotes[Math.floor(rand() * answer.quotes.length)];
+        const unlock = done || misses >= 3;
+        clue.replaceChildren(
+          el('p', { className: 'prompt', textContent: 'Which hero says…' }),
+          el('blockquote', { textContent: `“${q.text}”` }),
+          unlock && q.audio
+            ? el('audio', { controls: true, src: q.audio, preload: 'none', ariaLabel: 'Voice line audio' })
+            : el('p', { className: 'hint', textContent: `🔊 Voice line unlocks after ${3 - misses} more wrong ${3 - misses === 1 ? 'guess' : 'guesses'}.` }),
+        );
+      } else if (mode === 'ability') {
+        const ability = answer.abilities[Math.floor(rand() * answer.abilities.length)];
+        const turn = [90, 180, 270][Math.floor(rand() * 3)];
+        const upright = done || misses >= 3;
+        clue.replaceChildren(
+          el('p', { className: 'prompt', textContent: 'Which hero has this ability?' }),
+          el('div', { className: 'ability' }, el('img', {
+            src: `img/ability/${slug(ability)}.png`, alt: done ? ability : 'Mystery ability icon', width: 128, height: 128,
+            style: `transform: rotate(${upright ? 0 : turn}deg)`,
+          })),
+          el('p', { className: 'hint', textContent: done ? `It's ${answer.name}'s ${ability}.` : upright ? 'Icon is now upright.' : `Icon turns upright after ${3 - misses} more wrong ${3 - misses === 1 ? 'guess' : 'guesses'}.` }),
+        );
+      } else if (mode === 'emoji') {
+        const shown = done ? answer.emoji.length : Math.min(misses + 1, answer.emoji.length);
+        clue.replaceChildren(
+          el('p', { className: 'prompt', textContent: 'Which hero do these emoji describe?' }),
+          el('p', { className: 'emoji', ariaLabel: `Emoji clues: ${answer.emoji.slice(0, shown).join(' ')}` },
+            ...answer.emoji.map((e, i) => el('span', { textContent: i < shown ? e : '❔', ariaHidden: 'true' }))),
+          el('p', { className: 'hint', textContent: shown < answer.emoji.length ? 'One more emoji per wrong guess.' : 'All emoji revealed.' }),
+        );
+      } else if (mode === 'splash') {
+        const x = 25 + rand() * 50, y = 15 + rand() * 40; // focus point, biased toward the upper half where faces are
+        const zoom = done ? 1 : Math.max(1.25, 4 - misses * 0.5);
+        clue.replaceChildren(
+          el('p', { className: 'prompt', textContent: 'Which hero is in this art?' }),
+          el('div', { className: 'splash' }, el('img', {
+            src: answer.splash, alt: done ? `${answer.name} art` : 'Zoomed-in hero art',
+            style: `transform: scale(${zoom}); transform-origin: ${x}% ${y}%`,
+          })),
+          el('p', { className: 'hint', textContent: done ? '' : 'Zooms out with each wrong guess.' }),
+        );
+      }
+    }
 
     function render() {
+      renderNav();
+      const done = won();
+      const misses = save.guesses.filter((n) => n !== answer.name).length;
+      const classic = mode === 'classic';
+      $('intro').textContent = classic
+        ? "Guess today's Deadlock hero from their attributes."
+        : `${MODES[mode].label} mode: guess the hero from the clue.`;
+      $('clue').hidden = classic;
+      if (!classic) renderClue(misses, done);
+
       const body = $('rows');
-      body.innerHTML = '';
-      for (const name of [...save.guesses].reverse()) {
+      body.replaceChildren();
+      if (classic) for (const name of [...save.guesses].reverse()) {
         const hero = byName.get(name.toLowerCase());
-        const tr = document.createElement('tr');
-        const th = document.createElement('th');
-        th.scope = 'row';
-        th.textContent = hero.name;
-        tr.append(th);
+        const tr = el('tr', {}, el('th', { scope: 'row', textContent: hero.name }));
         for (const c of compare(hero, answer)) {
-          const td = document.createElement('td');
-          td.className = c.status;
-          td.textContent = c.value + (c.arrow ? ' ' + c.arrow : '');
+          const td = el('td', { className: c.status, textContent: c.value + (c.arrow ? ' ' + c.arrow : '') });
           const verdict = { green: 'correct', yellow: 'partial match', red: 'wrong' }[c.status];
           const hint = c.arrow ? (c.arrow === '↑' ? ', answer is higher' : ', answer is lower') : '';
           td.setAttribute('aria-label', `${c.label}: ${c.value}, ${verdict}${hint}`);
@@ -115,13 +206,16 @@ if (typeof document !== 'undefined') {
         }
         body.append(tr);
       }
-      $('board').hidden = !save.guesses.length;
-      const done = won();
+      $('board').hidden = !classic || !save.guesses.length;
+      $('list').hidden = classic || !save.guesses.length;
+      $('list').replaceChildren(...[...save.guesses].reverse().map((n) =>
+        el('li', { className: n === answer.name ? 'green' : 'red', textContent: `${n === answer.name ? '✅' : '❌'} ${n}` })));
+
       input.disabled = $('submit').disabled = done;
       $('win').hidden = !done;
-      if (done) $('win-text').textContent = `You got ${answer.name} in ${save.guesses.length} ${save.guesses.length === 1 ? 'guess' : 'guesses'}!`;
+      if (done) $('win-text').textContent = `You got ${answer.name} in ${plural(save.guesses.length)}!`;
       const streak = save.lastWin >= day - 1 ? save.streak || 0 : 0;
-      $('streak').textContent = `Streak: ${streak} · Best: ${save.best || 0}`;
+      $('streak').textContent = `${MODES[mode].label} streak: ${streak} · Best: ${save.best || 0}`;
     }
 
     function showOptions() {
@@ -136,10 +230,8 @@ if (typeof document !== 'undefined') {
       if (!matches.length) active = -1;
       list.innerHTML = '';
       matches.forEach((h, i) => {
-        const li = document.createElement('li');
-        li.id = 'opt-' + i;
+        const li = el('li', { id: 'opt-' + i, textContent: h.name });
         li.setAttribute('role', 'option');
-        li.textContent = h.name;
         li.setAttribute('aria-selected', i === active);
         li.addEventListener('mousedown', (e) => { e.preventDefault(); submit(h.name); });
         list.append(li);
@@ -162,7 +254,7 @@ if (typeof document !== 'undefined') {
         save.best = Math.max(save.best || 0, save.streak);
         save.lastWin = day;
       }
-      store.set(save);
+      store.set(storeKey(mode), save);
       input.value = '';
       matches = [];
       drawOptions();
@@ -186,12 +278,16 @@ if (typeof document !== 'undefined') {
       submit(active >= 0 ? matches[active].name : input.value);
     });
     $('share').addEventListener('click', () => {
-      const text = shareText(day, save.guesses.map((n) => compare(byName.get(n.toLowerCase()), answer))) + '\n' + location.href;
+      const rows = save.guesses.map((n) => mode === 'classic'
+        ? compare(byName.get(n.toLowerCase()), answer).map((c) => c.status)
+        : [n === answer.name ? 'green' : 'red']);
+      const text = shareText(day, mode, rows) + '\n' + location.href;
       navigator.clipboard.writeText(text)
         .then(() => ($('status').textContent = 'Copied to clipboard!'))
         .catch(() => window.prompt('Copy your result:', text));
     });
+    window.addEventListener('hashchange', load);
 
-    render();
+    load();
   }
 }
