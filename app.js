@@ -1,5 +1,5 @@
 // Deadle — daily Deadlock hero guesser. Pure logic on top, DOM wiring at the bottom.
-const LAUNCH = Date.UTC(2026, 9, 22); // day 1 = 2026-10-22 UTC. Never change after launch: it shifts every past answer.
+const LAUNCH = Date.UTC(2026, 9, 23); // day 1 = 2026-10-23 UTC. Never change after launch: it shifts every past answer.
 const ATTRS = [
   { key: 'pronouns', label: 'Pronouns' },
   { key: 'type', label: 'Type' },
@@ -84,7 +84,7 @@ function shareText(day, mode, rows) {
   return `Deadle #${day + 1} ${m.icon} ${m.label} — solved in ${n} ${n === 1 ? 'guess' : 'guesses'}\n${grid}`;
 }
 
-if (typeof module !== 'undefined') module.exports = { MODES, answerFor, dailyAnswer, dailyRand, compare, shareText, dayIndex, slug };
+if (typeof module !== 'undefined') module.exports = { MODES, answerFor, dailyAnswer, dailyRand, compare, shareText, dayIndex, isoDate, slug };
 
 // ---------- browser ----------
 if (typeof document !== 'undefined') {

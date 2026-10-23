@@ -1,7 +1,7 @@
 // Run: node test.js
 const assert = require('assert');
 const fs = require('fs');
-const { MODES, answerFor, dailyAnswer, compare, shareText, slug } = require('./app.js');
+const { MODES, answerFor, dailyAnswer, compare, shareText, isoDate, slug } = require('./app.js');
 const heroes = require('./heroes.json');
 const N = heroes.length;
 
@@ -13,7 +13,7 @@ assert.deepStrictEqual(Array.from({ length: N }, (_, d) => answerFor(d, heroes).
 // Adding a hero (dated in the future) must not change any earlier day.
 const later = [...heroes, { name: 'Newcomer', added: '2027-06-01' }];
 for (let d = 0; d < 400; d++) {
-  if (new Date(Date.UTC(2026, 9, 22) + d * 864e5).toISOString().slice(0, 10) >= '2027-06-01') break;
+  if (isoDate(d) >= '2027-06-01') break;
   assert.strictEqual(answerFor(d, later).name, answerFor(d, heroes).name, `day ${d} unchanged`);
 }
 assert.ok(Array.from({ length: 200 }, (_, i) => answerFor(400 + i, later).name).includes('Newcomer'), 'newcomer joins later');
