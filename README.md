@@ -1,4 +1,4 @@
-# Deadle
+# Urndle
 
 A daily hero-guessing game for Valve's Deadlock, in the style of LoLdle. Fan project, not affiliated with Valve.
 

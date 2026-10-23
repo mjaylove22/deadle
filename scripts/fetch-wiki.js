@@ -5,7 +5,7 @@
 const fs = require('fs');
 const { slug } = require('../app.js'); // same file names the game looks up
 const WIKI = 'https://deadlock.wiki';
-const HEADERS = { 'User-Agent': 'Deadle fan game data refresh (github.com/mjaylove22/deadle)' };
+const HEADERS = { 'User-Agent': 'Urndle fan game data refresh (github.com/mjaylove22/urndle)' };
 const MAX_QUOTES = 6;
 
 const raw = async (title) => (await fetch(`${WIKI}/index.php?action=raw&title=${encodeURIComponent(title)}`, { headers: HEADERS })).text();

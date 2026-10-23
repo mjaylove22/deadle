@@ -1,4 +1,4 @@
-// Deadle — daily Deadlock hero guesser. Pure logic on top, DOM wiring at the bottom.
+// Urndle — daily Deadlock hero guesser. Pure logic on top, DOM wiring at the bottom.
 const LAUNCH = Date.UTC(2026, 9, 23); // day 1 = 2026-10-23 UTC. Never change after launch: it shifts every past answer.
 const ATTRS = [
   { key: 'pronouns', label: 'Pronouns' },
@@ -81,7 +81,7 @@ function shareText(day, mode, rows) {
   const grid = mode === 'classic'
     ? rows.map((r) => r.map((s) => EMOJI[s]).join('')).join('\n')
     : rows.map((r) => EMOJI[r[0]]).join('');
-  return `Deadle #${day + 1} ${m.icon} ${m.label} — solved in ${n} ${n === 1 ? 'guess' : 'guesses'}\n${grid}`;
+  return `Urndle #${day + 1} ${m.icon} ${m.label} — solved in ${n} ${n === 1 ? 'guess' : 'guesses'}\n${grid}`;
 }
 
 if (typeof module !== 'undefined') module.exports = { MODES, answerFor, dailyAnswer, dailyRand, compare, shareText, dayIndex, isoDate, slug };
@@ -94,7 +94,7 @@ if (typeof document !== 'undefined') {
     get(key) { try { return JSON.parse(localStorage.getItem(key)) || {}; } catch { return {}; } },
     set(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); } catch { /* blocked storage: game still works, just won't persist */ } },
   };
-  const storeKey = (mode) => (mode === 'classic' ? 'deadle' : 'deadle:' + mode);
+  const storeKey = (mode) => (mode === 'classic' ? 'urndle' : 'urndle:' + mode);
   const plural = (n) => `${n} ${n === 1 ? 'guess' : 'guesses'}`;
   const portrait = (name, size) => el('img', { src: `img/hero/${slug(name)}.png`, alt: '', width: size, height: size });
 
