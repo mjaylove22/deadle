@@ -46,3 +46,11 @@ and `added` fields, skips files already downloaded, and prints a TODO list of an
 Adding a hero after launch: run the script, write its `emoji`, and give it `"added": "YYYY-MM-DD"` (today or later,
 never earlier) so past days keep their answers. Only add it once it has art, icons and voice lines. Never change
 `LAUNCH` or a mode's `salt` in `app.js` after launch.
+
+## License & credits
+
+- Code: [MIT](LICENSE).
+- `heroes.json`: data from [deadlock.wiki](https://deadlock.wiki) contributors, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
+- `img/` and `audio/`: art, icons and voice lines © Valve Corporation, not covered by this repo's license.
+
+Fan project, not affiliated with or endorsed by Valve. Deadlock is a trademark of Valve Corporation.

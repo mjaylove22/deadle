@@ -1,0 +1,37 @@
+MIT License
+
+Copyright (c) 2026 mjaylove22
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---------------------------------------------------------------------------
+This license covers the source code only (*.html, *.css, *.js, scripts/).
+It does NOT cover:
+
+- img/ and audio/: hero art, ability icons and voice lines are property of
+  Valve Corporation. They are used here in a non-affiliated fan project and are
+  not licensed by this repository.
+- heroes.json: hero data gathered from deadlock.wiki (https://deadlock.wiki),
+  whose content is licensed CC BY-SA 4.0
+  (https://creativecommons.org/licenses/by-sa/4.0/). heroes.json is shared under
+  the same license, with attribution to the deadlock.wiki contributors. Its
+  hand-written "emoji" clues are original to this project.
+
+Deadlock is a trademark of Valve Corporation. This project is not affiliated
+with or endorsed by Valve.
